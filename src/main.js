@@ -26,7 +26,13 @@ function animate() {
     renderer.render( scene, camera );
 }
 
-const audio = new AudioHandler();
+const waveCanvas = document.getElementById('wave');
+const freqCanvas = document.getElementById('freq');
+const rmsEl = document.getElementById('rms');
+const peakEl = document.getElementById('peak');
+const domEl = document.getElementById('dom');
+
+const audio = new AudioHandler({waveCanvas, freqCanvas});
 document.body.addEventListener('click', () => {
     if (!isPlaying && !didStart) {
         didStart = true;
@@ -39,3 +45,12 @@ document.body.addEventListener('click', () => {
         isPlaying = !isPlaying;
     }
 })
+
+function refreshStats() {
+    const stats = audio.getStats();
+    rmsEl.textContent = stats.rms.toFixed(3);
+    peakEl.textContent = isFinite(stats.peakDb) ? stats.peakDb.toFixed(1) + ' dBFS' : '—';
+    domEl.textContent = (stats.dominantHz>=20 && stats.dominantHz<=20000) ? Math.round(stats.dominantHz)+' Hz' : '—';
+    requestAnimationFrame(refreshStats);
+}
+refreshStats();
