@@ -230,16 +230,22 @@ export class AudioHandler {
     }
 
     _updateStats(timeBytes, freqBytes) {
-        let sumSq=0, peak=0;
-        for (let i=0;i<timeBytes.length;i++){
+        let sumSq= 0, peak= 0;
+        for (let i= 0; i<timeBytes.length; i++){
             const s = (timeBytes[i]-128)/128;
-            sumSq += s*s; const a = Math.abs(s); if (a>peak) peak=a;
+            sumSq += s*s;
+            const a = Math.abs(s);
+            if (a>peak) peak=a;
         }
         const rms = Math.sqrt(sumSq/timeBytes.length);
         const peakDb = 20*Math.log10(Math.max(peak, 1e-8));
 
         let maxMag=-1, maxIdx=0;
-        for (let i=1;i<freqBytes.length;i++){ if (freqBytes[i]>maxMag){ maxMag=freqBytes[i]; maxIdx=i; } }
+        for (let i=1;i<freqBytes.length;i++){
+            if (freqBytes[i]>maxMag){
+                maxMag=freqBytes[i]; maxIdx=i;
+            }
+        }
         const nyquist = this._ctx ? this._ctx.sampleRate/2 : 22050;
         const binHz = nyquist / freqBytes.length;
         const dom = maxIdx * binHz;
