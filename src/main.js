@@ -61,15 +61,16 @@ function refreshStats() {
     domEl.textContent = (stats.dominantHz>=20 && stats.dominantHz<=20000) ? Math.round(stats.dominantHz)+' Hz' : '—';
     targetScale = lerp(minScale, maxScale, stats.rms*2);
 
-    const l = stats.freqBytes.length;
-    const red = getAvgFromArray(stats.freqBytes.slice(0, 20))
-    const green = getAvgFromArray(stats.freqBytes.slice(40, 60))
-    const blue = getAvgFromArray(stats.freqBytes.slice(100, 120))
-    material.color.setRGB(
-        toFloat(red, 0, 255),
-        toFloat(green, 0, 255),
-        toFloat(blue, 0, 255),
-    )
+    if (stats.freqBytes.length > 0) {
+        const red = getAvgFromArray(stats.freqBytes.slice(700, 750))
+        const green = getAvgFromArray(stats.freqBytes.slice(300, 400))
+        const blue = getAvgFromArray(stats.freqBytes.slice(0, 100))
+        material.color.setRGB(
+            toFloat(red, 0, 255),
+            toFloat(green, 0, 255),
+            toFloat(blue, 0, 255),
+        )
+    }
     requestAnimationFrame(refreshStats);
 }
 refreshStats();
