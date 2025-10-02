@@ -1,9 +1,12 @@
 import * as THREE from 'three';
 import {AudioHandler} from "./audio-handler.js";
+import {getAvgFromArray, lerp, toFloat} from "./utils.js";
 
 const audioPath = 'public/music.mp3'
 
 let isPlaying, didStart = false;
+
+let stats = { rms: 0, peakDb: -Infinity, dominantHz: 0, freqBytes: [], timeBytes: [] };
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
@@ -20,9 +23,14 @@ scene.add( cube );
 
 camera.position.z = 5;
 
-function animate() {
+let targetScale = 0
+const minScale = 0
+const maxScale = 3
+
+function animate(time) {
     cube.rotation.x += 0.01;
     cube.rotation.y += 0.01;
+    cube.scale.set(targetScale, targetScale, targetScale)
     renderer.render( scene, camera );
 }
 
@@ -47,10 +55,21 @@ document.body.addEventListener('click', () => {
 })
 
 function refreshStats() {
-    const stats = audio.getStats();
+    stats = audio.getStats();
     rmsEl.textContent = stats.rms.toFixed(3);
     peakEl.textContent = isFinite(stats.peakDb) ? stats.peakDb.toFixed(1) + ' dBFS' : '—';
     domEl.textContent = (stats.dominantHz>=20 && stats.dominantHz<=20000) ? Math.round(stats.dominantHz)+' Hz' : '—';
+    targetScale = lerp(minScale, maxScale, stats.rms*2);
+
+    const l = stats.freqBytes.length;
+    const red = getAvgFromArray(stats.freqBytes.slice(0, 20))
+    const green = getAvgFromArray(stats.freqBytes.slice(40, 60))
+    const blue = getAvgFromArray(stats.freqBytes.slice(100, 120))
+    material.color.setRGB(
+        toFloat(red, 0, 255),
+        toFloat(green, 0, 255),
+        toFloat(blue, 0, 255),
+    )
     requestAnimationFrame(refreshStats);
 }
 refreshStats();

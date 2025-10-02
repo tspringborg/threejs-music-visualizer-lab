@@ -34,7 +34,7 @@ export class AudioHandler {
         this._timeData = null;
         this._raf = 0;
         this._running = false;
-        this._lastStats = { rms: 0, peakDb: -Infinity, dominantHz: 0 };
+        this._lastStats = { rms: 0, peakDb: -Infinity, dominantHz: 0, freqBytes: [], timeBytes: [] };
 
         // Parameters
         this._fftSize = opts.fftSize || 2048;
@@ -238,6 +238,7 @@ export class AudioHandler {
             const a = Math.abs(s);
             if (a>peak) peak=a;
         }
+        // root mean square
         const rms = Math.sqrt(sumSq/timeBytes.length);
         const peakDb = 20*Math.log10(Math.max(peak, 1e-8));
 
@@ -251,6 +252,6 @@ export class AudioHandler {
         const binHz = nyquist / freqBytes.length;
         const dom = maxIdx * binHz;
 
-        this._lastStats = { rms, peakDb, dominantHz: dom };
+        this._lastStats = { rms, peakDb, dominantHz: dom , freqBytes, timeBytes};
     }
 }
