@@ -198,7 +198,8 @@ export class AudioHandler {
     }
 
     _drawWave(data) {
-        const c = this.waveCanvas; if (!c) return;
+        const c = this.waveCanvas;
+        if (!c) return;
         const ctx = c.getContext('2d');
         const w = c.clientWidth, h = c.clientHeight;
         ctx.clearRect(0,0,w,h);
