@@ -1,19 +1,34 @@
 import * as THREE from 'three';
-import {AudioHandler} from "./audio-handler.js";
-import {getAvgFromArray, lerp, toFloat} from "./utils.js";
+import {getAvgFromArray, getRMS, lerp, toFloat} from "./utils.js";
+import {EffectComposer, OutputPass, RenderPass, UnrealBloomPass} from "three/addons";
 
 const audioPath = 'public/music.mp3'
 
 let isPlaying, didStart = false;
 
-let stats = { rms: 0, peakDb: -Infinity, dominantHz: 0, freqBytes: [], timeBytes: [] };
-
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
 
 const renderer = new THREE.WebGLRenderer();
+renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.setSize( window.innerWidth, window.innerHeight );
-renderer.setAnimationLoop( animate );
+
+const renderScene = new RenderPass(scene, camera);
+
+const bloomPass = new UnrealBloomPass(
+    new THREE.Vector2( window.innerWidth, window.innerHeight ),
+)
+bloomPass.threshold = 0.35;
+bloomPass.strength = 2;
+bloomPass.radius = 0.6;
+
+const outputPass = new OutputPass()
+
+const composer = new EffectComposer(renderer)
+composer.addPass(renderScene)
+composer.addPass(bloomPass)
+composer.addPass(outputPass)
+
 document.body.appendChild( renderer.domElement );
 
 const geometry = new THREE.BoxGeometry( 1, 1, 1 );
@@ -27,50 +42,58 @@ let targetScale = 0
 const minScale = 0
 const maxScale = 3
 
+let targetXRotation = 0
+let targetYRotation = 0
+
 function animate(time) {
-    cube.rotation.x += 0.01;
-    cube.rotation.y += 0.01;
+    if(isPlaying) {
+        const rms = getRMS(analyser);
+        const freqData = [...analyser.getFrequencyData()];
+        const red = toFloat(getAvgFromArray(freqData.slice(500,512)), 0, 255);
+        const green = toFloat(getAvgFromArray(freqData.slice(300,500)), 0, 200);
+        const blue = toFloat(getAvgFromArray(freqData.slice(0,300)), 0, 100);
+        targetScale = lerp(minScale, maxScale, rms * 3);
+        material.color.setRGB(red, green * 2, blue * 4 );
+
+        let xRotation = toFloat(getAvgFromArray(freqData.slice(0,100)));
+        xRotation = lerp(-0.02, 0.02, xRotation );
+        targetXRotation = lerp(targetXRotation, xRotation, 0.5);
+        cube.rotation.x += THREE.MathUtils.clamp(targetXRotation, -0.2, 0.2);
+        let yRotation = toFloat(getAvgFromArray(freqData.slice(200,400)));
+        yRotation = lerp(-0.02, 0.02, yRotation );
+        targetYRotation = lerp(targetYRotation, yRotation, 0.5);
+        cube.rotation.y += THREE.MathUtils.clamp(targetYRotation, -0.2, 0.2);
+    }
+
     cube.scale.set(targetScale, targetScale, targetScale)
-    renderer.render( scene, camera );
+    composer.render(time)
+    requestAnimationFrame( animate );
 }
 
-const waveCanvas = document.getElementById('wave');
-const freqCanvas = document.getElementById('freq');
-const rmsEl = document.getElementById('rms');
-const peakEl = document.getElementById('peak');
-const domEl = document.getElementById('dom');
+const listener = new THREE.AudioListener();
 
-const audio = new AudioHandler({waveCanvas, freqCanvas});
+let analyser, sound;
+function playAudio() {
+    sound = new THREE.Audio( listener );
+    const audioLoader = new THREE.AudioLoader();
+    audioLoader.load( audioPath, function( buffer ) {
+        sound.setBuffer( buffer );
+        sound.setVolume(0.5);
+        sound.offset = 123;
+        sound.play();
+        isPlaying = true
+    });
+    analyser = new THREE.AudioAnalyser( sound, 1024 );
+}
+
 document.body.addEventListener('click', () => {
     if (!isPlaying && !didStart) {
         didStart = true;
-        audio.loadUrl(audioPath).then(() => {
-            isPlaying = true
-            audio.play()
-        })
+        playAudio();
     } else {
-        isPlaying ? audio.pause() : audio.play();
+        isPlaying ? sound.pause() : sound.play();
         isPlaying = !isPlaying;
     }
 })
 
-function refreshStats() {
-    stats = audio.getStats();
-    rmsEl.textContent = stats.rms.toFixed(3);
-    peakEl.textContent = isFinite(stats.peakDb) ? stats.peakDb.toFixed(1) + ' dBFS' : '—';
-    domEl.textContent = (stats.dominantHz>=20 && stats.dominantHz<=20000) ? Math.round(stats.dominantHz)+' Hz' : '—';
-    targetScale = lerp(minScale, maxScale, stats.rms*2);
-
-    if (stats.freqBytes.length > 0) {
-        const red = getAvgFromArray(stats.freqBytes.slice(700, 750))
-        const green = getAvgFromArray(stats.freqBytes.slice(300, 400))
-        const blue = getAvgFromArray(stats.freqBytes.slice(0, 100))
-        material.color.setRGB(
-            toFloat(red, 0, 255),
-            toFloat(green, 0, 255),
-            toFloat(blue, 0, 255),
-        )
-    }
-    requestAnimationFrame(refreshStats);
-}
-refreshStats();
+animate()

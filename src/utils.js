@@ -14,6 +14,31 @@ export function getMedianFromArray(arr) {
         : sorted[mid];
 }
 
+// Root Mean Square
+export function getRMS(analyser) {
+    const node = analyser.analyser;            // underlying AnalyserNode
+    const N = node.fftSize;
+
+    // Prefer float API if available
+    if (node.getFloatTimeDomainData) {
+        const buf = new Float32Array(N);
+        node.getFloatTimeDomainData(buf);        // values in [-1, 1]
+        let sum = 0;
+        for (let i = 0; i < N; i++) sum += buf[i] * buf[i];
+        return Math.sqrt(sum / N);               // 0..1 (≈0.707 for full-scale sine)
+    } else {
+        // Fallback: bytes 0..255, convert to [-1,1]
+        const bytes = new Uint8Array(N);
+        node.getByteTimeDomainData(bytes);
+        let sum = 0;
+        for (let i = 0; i < N; i++) {
+            const v = (bytes[i] - 128) / 128;
+            sum += v * v;
+        }
+        return Math.sqrt(sum / N);
+    }
+}
+
 export function getMaxFromArray(arr) {
     return Math.max(...arr);
 }

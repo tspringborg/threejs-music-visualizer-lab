@@ -16,19 +16,3 @@ body, html {
     margin: 0;
     padding: 0;
 }
-#stats {
-    position: absolute;
-    top: 0;
-    left: 0;
-    z-index: 100;
-    width: 150px;
-}
-.stat {
-    font-size: 0.7em;
-    display: flex;
-    justify-content: space-between;
-    gap: 10px;
-}
-.stat > * {
-    white-space: nowrap;
-}
